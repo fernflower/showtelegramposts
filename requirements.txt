@@ -1,0 +1,5 @@
+asyncio
+python-telegram-bot
+pymongo
+facebook-scraper
+telethon

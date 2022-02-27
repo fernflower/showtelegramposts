@@ -1,0 +1,8 @@
+[build-system]
+requires = [
+    "asyncio",
+    "python-telegram-bot",
+    "pymongo",
+    "telethon",
+]
+build-backend = "setuptools.build_meta"
