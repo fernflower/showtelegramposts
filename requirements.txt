@@ -1,5 +1,8 @@
 asyncio
+bottle
+jinja2
 python-telegram-bot
 pymongo
 facebook-scraper
 telethon
+uwsgi

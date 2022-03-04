@@ -1,4 +1,3 @@
-import bson
 import datetime
 import html
 import json
@@ -6,15 +5,12 @@ import logging
 import os
 import traceback
 
-import pymongo
 import telegram
 from telegram import ParseMode, Update
 from telegram.ext import CommandHandler, ConversationHandler, Updater, MessageHandler, CallbackContext, Filters
 
-DB = pymongo.MongoClient(os.getenv('MONGO_URL', 'mongodb://db:27017/'),
-                         username=os.getenv('MONGO_USERNAME'),
-                         password=os.getenv('MONGO_PASSWORD'))
-DB_NAME = 'posts'
+from web import db
+
 TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 DEVELOPER_CHAT_ID = os.getenv('DEVELOPER_CHAT_ID')
 
@@ -28,33 +24,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-def save_post(post_data):
-    db = DB[DB_NAME]
-    col = db["posts"]
-    if '_id' in post_data:
-        logger.debug('Found existing entry with id %s', post_data['_id'])
-        col.replace_one({'_id': post_data['_id']}, post_data)
-        return post_data['_id']
-    else:
-        res = col.insert_one(post_data)
-        logger.debug('Created a new entry %s', res)
-        return res.inserted_id
-
-
-def get_post(post_id):
-    db = DB[DB_NAME]
-    col = db["posts"]
-    res = col.find_one({"_id": bson.ObjectId(post_id)})
-    return res
-
-
 def get_types(update: Update, context: CallbackContext) -> None:
     update.effective_message.reply_text(','.join(MESSAGE_TYPES))
 
 
 def get_message(update: Update, context: CallbackContext) -> None:
     msg_id = context.args[0] if context.args else ''
-    msg = get_post(msg_id)
+    msg = db.get_post(msg_id)
     if msg:
         update.effective_message.reply_text(f'Type: {msg["type"]}\n{msg["text"]}')
     else:
@@ -64,7 +40,7 @@ def get_message(update: Update, context: CallbackContext) -> None:
 def register_message(update: Update, context: CallbackContext) -> None:
     msg = update.effective_message.text
     message = {'text': update.effective_message.text, 'date': datetime.datetime.now(), 'type': ''}
-    msg_id = save_post(message)
+    msg_id = db.save_post(message)
     if not msg_id:
         # Errors duting message save, can't proceed
         logger.error('Could not save message %s', msg)
@@ -84,7 +60,7 @@ def set_type(update: Update, context: CallbackContext) -> None:
         return
     msg_type = update.effective_message.text if update.effective_message.text != 'skip' else ''
     msg['type'] = msg_type
-    res = save_post(msg)
+    res = db.save_post(msg)
     update.effective_message.reply_text(f'Set {msg_type} for message {msg["_id"]}')
 
     return ConversationHandler.END
@@ -98,10 +74,10 @@ def set_type_for_message(update: Update, context: CallbackContext) -> None:
     else:
         msg_id, msg_type = args[0:2]
         logger.debug('%s, %s', msg_id, msg_type)
-        msg = get_post(msg_id)
+        msg = db.get_post(msg_id)
         logger.debug('msg is %s', msg)
         msg['type'] = msg_type
-        save_post(msg)
+        db.save_post(msg)
     update.effective_message.reply_text(f'Set {msg_type} for message {msg_id}')
 
 

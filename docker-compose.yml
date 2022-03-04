@@ -8,9 +8,9 @@ services:
     environment:
       TELEGRAM_BOT_TOKEN: "$TELEGRAM_BOT_TOKEN"
       DEVELOPER_CHAT_ID: "$DEVELOPER_CHAT_ID"
-      TZ: Europe/Prague
       MONGO_USERNAME: "$MONGO_USERNAME"
       MONGO_PASSWORD: "$MONGO_PASSWORD"
+      TZ: Europe/Prague
     depends_on:
       - db
   db:
@@ -24,5 +24,34 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: "$MONGO_PASSWORD"
     volumes:
       - mongodb:/data/db
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile_app
+    environment:
+      TZ: Europe/Prague
+      MONGO_USERNAME: "$MONGO_USERNAME"
+      MONGO_PASSWORD: "$MONGO_PASSWORD"
+      STATIC_DIR: "/app/static"
+    depends_on:
+      - db
+    volumes:
+      - ./socket:/app/socket
+      - ./log/uwsgi:/var/log/uwsgi
+      - ./src/web/static/:/app/static:Z
+  web:
+    image: nginx:1.19-alpine
+    volumes:
+      - ./log/nginx:/var/log/nginx
+      - ./templates:/etc/nginx/templates
+      - ./socket:/app/socket
+      - ./src/web/static/:/app/static:Z
+    ports:
+      - "7778:7778"
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=7778
+    depends_on:
+      - app
 volumes:
   mongodb:
