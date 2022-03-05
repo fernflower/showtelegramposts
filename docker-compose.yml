@@ -30,19 +30,17 @@ services:
       dockerfile: Dockerfile_app
     environment:
       TZ: Europe/Prague
-      MONGO_USERNAME: "$MONGO_USERNAME"
-      MONGO_PASSWORD: "$MONGO_PASSWORD"
-      STATIC_DIR: "/app/static"
+      command: uwsgi --ini /app/templates/uwsgi.ini
     depends_on:
       - db
     volumes:
+      # - ./log/uwsgi:/var/log/uwsgi
       - ./socket:/app/socket
-      - ./log/uwsgi:/var/log/uwsgi
       - ./src/web/static/:/app/static:Z
   web:
     image: nginx:1.19-alpine
     volumes:
-      - ./log/nginx:/var/log/nginx
+      #- ./log/nginx:/var/log/nginx
       - ./templates:/etc/nginx/templates
       - ./socket:/app/socket
       - ./src/web/static/:/app/static:Z

@@ -1,6 +1,7 @@
 asyncio
 bottle
 jinja2
+python-dotenv
 python-telegram-bot
 pymongo
 facebook-scraper

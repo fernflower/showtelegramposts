@@ -3,12 +3,17 @@ import bson
 import logging
 import os
 
+import dotenv
 import pymongo
 
 # set up logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# load env vars from .env
+# NOTE(ivasilev) The hardcoded path is because of issues with passing env vars in uwsgi.ini
+dotenv.load_dotenv(os.getenv('DOT_ENV_FILE', '/app/.env'))
 
 DB_NAME = 'posts'
 DB = pymongo.MongoClient(os.getenv('MONGO_URL', 'mongodb://db:27017/'),
