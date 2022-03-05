@@ -39,15 +39,25 @@ def get_post(post_id):
     return res
 
 
-def get_all_posts(criteria=None):
+def get_all_posts(criteria=None, date_format=None):
+    """
+    Retrieve posts matching the criteria if one is specified.
+    If date_format is passed, the date will be converted to expected format and returned as string.
+    """
     logger.debug('Preparing to get all posts')
     col = _get_posts_col()
-    if not criteria:
-        return col.find()
-    return col.find(criteria)
+    res = list(col.find() if criteria is None else col.find(criteria))
+    # apply date formatting
+    if date_format is not None:
+        for r in res:
+            try:
+                r['date'] = r.get('date').strftime(date_format)
+            except (KeyError, AttributeError):
+                r['date'] = ''
+    return res
 
 
 def delete_post(post_id):
-    """Delete post by id""" 
+    """Delete post by id"""
     col = _get_posts_col()
     col.delete_one({"_id": bson.ObjectId(post_id)})
