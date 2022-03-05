@@ -16,17 +16,28 @@ logger.setLevel(logging.DEBUG)
 dotenv.load_dotenv(os.getenv('DOT_ENV_FILE', '/app/.env'))
 
 DB_NAME = 'posts'
-DB = pymongo.MongoClient(os.getenv('MONGO_URL', 'mongodb://db:27017/'),
-                         username=os.getenv('MONGO_USERNAME'),
-                         password=os.getenv('MONGO_PASSWORD'))
-
-def _get_posts_col():
-    return DB[DB_NAME]["posts"]
 
 
-def save_post(post_data):
+def create_client():
+    """
+    Create an instance of MongoClient.
+    Need to so that as pymongo is not fork safe, without this db connection won't be processed properly
+    https://stackoverflow.com/questions/54778245/timeout-with-flask-uwsgi-nginx-app-using-mongodb
+    """
+    client = pymongo.MongoClient(os.getenv('MONGO_URL', 'mongodb://db:27017/'),
+                                 username=os.getenv('MONGO_USERNAME'),
+                                 password=os.getenv('MONGO_PASSWORD'), connect=False)
+    return client
+
+
+def _get_posts_col(client=None):
+    client = client or create_client()
+    return client[DB_NAME]["posts"]
+
+
+def save_post(post_data, client=None):
     """Save a new post or apply changes to existing post"""
-    col = _get_posts_col()
+    col = _get_posts_col(client)
     if '_id' in post_data:
         logger.debug('Found existing entry with id %s', post_data['_id'])
         col.replace_one({'_id': post_data['_id']}, post_data)
@@ -37,20 +48,20 @@ def save_post(post_data):
         return res.inserted_id
 
 
-def get_post(post_id):
+def get_post(post_id, client=None):
     """Retrieve post by id"""
-    col = _get_posts_col()
+    col = _get_posts_col(client)
     res = col.find_one({"_id": bson.ObjectId(post_id)})
     return res
 
 
-def get_all_posts(criteria=None, date_format=None):
+def get_all_posts(criteria=None, date_format=None, client=None):
     """
     Retrieve posts matching the criteria if one is specified.
     If date_format is passed, the date will be converted to expected format and returned as string.
     """
     logger.debug('Preparing to get all posts')
-    col = _get_posts_col()
+    col = _get_posts_col(client)
     res = list(col.find() if criteria is None else col.find(criteria))
     # apply date formatting
     if date_format is not None:
@@ -62,7 +73,7 @@ def get_all_posts(criteria=None, date_format=None):
     return res
 
 
-def delete_post(post_id):
+def delete_post(post_id, client=None):
     """Delete post by id"""
-    col = _get_posts_col()
+    col = _get_posts_col(client)
     col.delete_one({"_id": bson.ObjectId(post_id)})

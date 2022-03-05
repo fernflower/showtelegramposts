@@ -13,6 +13,8 @@ services:
       TZ: Europe/Prague
     depends_on:
       - db
+    networks:
+      - backend
   db:
     container_name: db
     image: mongo
@@ -24,12 +26,17 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: "$MONGO_PASSWORD"
     volumes:
       - mongodb:/data/db
+    networks:
+      - backend
   app:
     build:
       context: .
       dockerfile: Dockerfile_app
     environment:
       TZ: Europe/Prague
+      STATIC_DIR: "/app/static"
+      MONGO_USERNAME: "$MONGO_USERNAME"
+      MONGO_PASSWORD: "$MONGO_PASSWORD"
       command: uwsgi --ini /app/templates/uwsgi.ini
     depends_on:
       - db
@@ -37,6 +44,8 @@ services:
       # - ./log/uwsgi:/var/log/uwsgi
       - ./socket:/app/socket
       - ./src/web/static/:/app/static:Z
+    networks:
+      - backend
   web:
     image: nginx:1.19-alpine
     volumes:
@@ -51,5 +60,10 @@ services:
       - NGINX_PORT=7778
     depends_on:
       - app
+    networks:
+      - backend
 volumes:
   mongodb:
+
+networks:
+  backend:
