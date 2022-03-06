@@ -63,13 +63,23 @@ def get_all_posts(criteria=None, date_format=None, client=None):
     logger.debug('Preparing to get all posts')
     col = _get_posts_col(client)
     res = list(col.find() if criteria is None else col.find(criteria))
-    # apply date formatting
-    if date_format is not None:
-        for r in res:
+    for r in res:
+        # apply date formatting
+        if date_format is not None:
             try:
                 r['date'] = r.get('date').strftime(date_format)
             except (KeyError, AttributeError):
                 r['date'] = ''
+        # add <a> tag to links and strip excessive newlines
+        text_with_paragraphs = ''
+        for paragraph in r['text'].split('\n'):
+            text_with_paragraphs += f'<p> {paragraph} </p>'
+        text_with_links = ''
+        for word in text_with_paragraphs.split(' '):
+            if word.startswith('http://') or word.startswith('https://'):
+                word = f'<a href="{word}" target="_blank">{word}</a>'
+            text_with_links += f' {word}'
+        r['text'] = text_with_links
     return res
 
 
